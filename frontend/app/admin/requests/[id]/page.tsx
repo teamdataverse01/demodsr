@@ -4,14 +4,15 @@ import { useRouter, useParams } from "next/navigation";
 import { getRequestDetail, approveRequest, rejectRequest } from "@/lib/api";
 import Link from "next/link";
 
-type AuditEntry = { id: number; actor: string; action: string; detail: string; timestamp: string };
-type SubjectData = Record<string, unknown>;
-type RequestData = Record<string, unknown>;
+interface AuditEntry { id: number; actor: string; action: string; detail: string; timestamp: string }
+interface SubjectData { name: string; email: string; phone: string; department: string; role: string; reg_number: string; address: string; tags: string; special_category: boolean; opt_out_marketing: boolean; is_deleted: boolean }
+interface RequestData { id: number; subject_name: string; subject_email: string; request_type: string; description: string; status: string; risk_tier: string; escalation_reason: string; created_at: string; completed_at: string | null; ai_draft: string | null; admin_notes: string | null; modification_data: string | null }
+interface DetailData { request: RequestData; subject: SubjectData | null; audit_trail: AuditEntry[] }
 
 export default function RequestDetail() {
   const router = useRouter();
   const { id } = useParams<{ id: string }>();
-  const [data, setData] = useState<{ request: RequestData; subject: SubjectData | null; audit_trail: AuditEntry[] } | null>(null);
+  const [data, setData] = useState<DetailData | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [notes, setNotes] = useState("");
@@ -58,55 +59,52 @@ export default function RequestDetail() {
 
   const { request: req, subject, audit_trail } = data;
   const isEscalated = req.status === "escalated";
-  const riskTier = String(req.risk_tier || "");
 
   return (
     <div style={{ minHeight: "100vh", background: "#f8fafc" }}>
       <div style={{ background: "#1e293b", color: "#fff", padding: "12px 24px", display: "flex", alignItems: "center", gap: 16 }}>
         <Link href="/admin/dashboard" style={{ color: "#94a3b8", fontSize: 14 }}>← Dashboard</Link>
-        <span style={{ fontWeight: 700, fontSize: 17 }}>Request #{req.id as number}</span>
-        <span className={`badge badge-${String(req.status)}`} style={{ marginLeft: 8 }}>{String(req.status).replace("_", " ")}</span>
-        {riskTier && <span className={`badge badge-${riskTier.toLowerCase()}`}>{riskTier}</span>}
+        <span style={{ fontWeight: 700, fontSize: 17 }}>Request #{req.id}</span>
+        <span className={`badge badge-${req.status}`} style={{ marginLeft: 8 }}>{req.status.replace("_", " ")}</span>
+        {req.risk_tier && <span className={`badge badge-${req.risk_tier.toLowerCase()}`}>{req.risk_tier}</span>}
       </div>
 
       <div style={{ maxWidth: 900, margin: "0 auto", padding: "32px 24px" }}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 20 }}>
-          {/* Request info */}
           <div className="card">
             <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>Request Details</h2>
             <Row label="Subject" value={`${req.subject_name} <${req.subject_email}>`} />
-            <Row label="Type" value={String(req.request_type).replace("_", " ")} />
-            <Row label="Description" value={String(req.description || "—")} />
-            <Row label="Submitted" value={new Date(String(req.created_at)).toLocaleString()} />
-            {!!req.completed_at && <Row label="Completed" value={new Date(String(req.completed_at)).toLocaleString()} />}
-            {!!req.escalation_reason && (
+            <Row label="Type" value={req.request_type.replace("_", " ")} />
+            <Row label="Description" value={req.description || "—"} />
+            <Row label="Submitted" value={new Date(req.created_at).toLocaleString()} />
+            {req.completed_at && <Row label="Completed" value={new Date(req.completed_at).toLocaleString()} />}
+            {req.escalation_reason && (
               <div style={{ marginTop: 12, padding: 12, background: "#fef3c7", borderRadius: 8, fontSize: 13, borderLeft: "4px solid #f59e0b" }}>
-                <strong>Escalation Reason:</strong><br />{String(req.escalation_reason)}
+                <strong>Escalation Reason:</strong><br />{req.escalation_reason}
               </div>
             )}
           </div>
 
-          {/* Subject data */}
           <div className="card">
             <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>Subject Record</h2>
             {subject ? (
               <>
-                <Row label="Name" value={String(subject.name || "—")} />
-                <Row label="Email" value={String(subject.email || "—")} />
-                <Row label="Phone" value={String(subject.phone || "—")} />
-                <Row label="Department" value={String(subject.department || "—")} />
-                <Row label="Role" value={String(subject.role || "—")} />
-                <Row label="Reg. No." value={String(subject.reg_number || "—")} />
-                <Row label="Address" value={String(subject.address || "—")} />
-                <Row label="Tags" value={String(subject.tags || "—")} />
+                <Row label="Name" value={subject.name || "—"} />
+                <Row label="Email" value={subject.email || "—"} />
+                <Row label="Phone" value={subject.phone || "—"} />
+                <Row label="Department" value={subject.department || "—"} />
+                <Row label="Role" value={subject.role || "—"} />
+                <Row label="Reg. No." value={subject.reg_number || "—"} />
+                <Row label="Address" value={subject.address || "—"} />
+                <Row label="Tags" value={subject.tags || "—"} />
                 {subject.special_category && (
                   <div style={{ marginTop: 8, padding: "6px 10px", background: "#fee2e2", borderRadius: 6, fontSize: 12, color: "#991b1b", fontWeight: 600 }}>
-                    ⚠ Special Category Data (Health)
+                    Special Category Data (Health)
                   </div>
                 )}
                 {subject.is_deleted && (
                   <div style={{ marginTop: 8, padding: "6px 10px", background: "#f0fdf4", borderRadius: 6, fontSize: 12, color: "#15803d", fontWeight: 600 }}>
-                    ✓ Record Deleted
+                    Record Deleted
                   </div>
                 )}
               </>
@@ -116,17 +114,15 @@ export default function RequestDetail() {
           </div>
         </div>
 
-        {/* AI Draft */}
         {req.ai_draft && (
           <div className="card" style={{ marginBottom: 20 }}>
-            <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>AI Draft Response <span style={{ fontSize: 12, color: "#64748b", fontWeight: 400 }}>(Gemini — for reference only, admin must review)</span></h2>
+            <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>AI Draft Response <span style={{ fontSize: 12, color: "#64748b", fontWeight: 400 }}>(Gemini — suggest only, admin must review)</span></h2>
             <div style={{ marginTop: 12, whiteSpace: "pre-wrap", fontSize: 14, color: "#374151", background: "#f8fafc", padding: 16, borderRadius: 8, borderLeft: "3px solid #6366f1" }}>
-              {String(req.ai_draft)}
+              {req.ai_draft}
             </div>
           </div>
         )}
 
-        {/* Actions for escalated */}
         {isEscalated && (
           <div className="card" style={{ marginBottom: 20, borderLeft: "4px solid #f59e0b" }}>
             <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>Admin Action Required</h2>
@@ -143,9 +139,7 @@ export default function RequestDetail() {
               <button className="btn btn-success" onClick={doApprove} disabled={actionLoading}>
                 {actionLoading ? "Processing…" : "Approve & Execute"}
               </button>
-              <button className="btn btn-danger" onClick={doReject} disabled={actionLoading}>
-                Reject
-              </button>
+              <button className="btn btn-danger" onClick={doReject} disabled={actionLoading}>Reject</button>
             </div>
           </div>
         )}
@@ -153,7 +147,6 @@ export default function RequestDetail() {
           <div style={{ marginBottom: 20, padding: 12, background: "#f0fdf4", borderRadius: 8, fontSize: 14, color: "#15803d" }}>{msg}</div>
         )}
 
-        {/* Audit trail */}
         <div className="card">
           <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>Audit Trail</h2>
           {audit_trail.length === 0 ? (
@@ -165,8 +158,7 @@ export default function RequestDetail() {
                   <div style={{ fontSize: 12, color: "#94a3b8", minWidth: 140 }}>{new Date(e.timestamp).toLocaleString()}</div>
                   <div>
                     <div style={{ fontSize: 13, fontWeight: 500 }}>
-                      <span style={{ color: "#1d4ed8" }}>{e.actor}</span>
-                      {" → "}
+                      <span style={{ color: "#1d4ed8" }}>{e.actor}</span>{" → "}
                       <span style={{ color: "#374151" }}>{e.action.replace("_", " ")}</span>
                     </div>
                     {e.detail && <div style={{ fontSize: 13, color: "#64748b", marginTop: 2 }}>{e.detail}</div>}

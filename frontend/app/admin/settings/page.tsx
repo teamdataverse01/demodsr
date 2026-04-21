@@ -4,11 +4,21 @@ import { useRouter } from "next/navigation";
 import { getSettings, getDbInspector, getAuditExport } from "@/lib/api";
 import Link from "next/link";
 
+interface RetentionRow { category: string; retention_period: string; basis: string; auto_delete: boolean }
+interface RetentionJob { type: string; schedule: string; last_run: string; next_run: string; records_flagged_last_run: number }
+interface DPA { controller: string; processor: string; dpa_reference: string; dpa_date: string; dpa_signed: boolean; basis: string }
+interface Encryption { at_rest: string; in_transit: string; sensitive_fields: string; key_management: string }
+interface Hosting { demo: string; production_recommended: string; on_premise_available: boolean; data_residency: string }
+interface Settings { retention_policy: RetentionRow[]; retention_job: RetentionJob; data_ownership: DPA; encryption: Encryption; hosting: Hosting }
+interface DbData { note: string; sample_records: Record<string, string | number | boolean | null>[] }
+interface AuditLog { id: number; request_id: number; actor: string; action: string; detail: string; timestamp: string }
+interface AuditData { note: string; logs: AuditLog[] }
+
 export default function SettingsPage() {
   const router = useRouter();
-  const [settings, setSettings] = useState<Record<string, unknown> | null>(null);
-  const [dbData, setDbData] = useState<Record<string, unknown> | null>(null);
-  const [auditData, setAuditData] = useState<Record<string, unknown> | null>(null);
+  const [settings, setSettings] = useState<Settings | null>(null);
+  const [dbData, setDbData] = useState<DbData | null>(null);
+  const [auditData, setAuditData] = useState<AuditData | null>(null);
   const [tab, setTab] = useState<"retention" | "encryption" | "dpa" | "hosting" | "db" | "logs">("retention");
   const [loading, setLoading] = useState(true);
 
@@ -20,29 +30,17 @@ export default function SettingsPage() {
   }, [router]);
 
   async function loadDb() {
-    if (!dbData) {
-      const d = await getDbInspector();
-      setDbData(d);
-    }
+    if (!dbData) setDbData(await getDbInspector());
     setTab("db");
   }
 
   async function loadLogs() {
-    if (!auditData) {
-      const d = await getAuditExport();
-      setAuditData(d);
-    }
+    if (!auditData) setAuditData(await getAuditExport());
     setTab("logs");
   }
 
   if (loading) return <div style={{ padding: 40, textAlign: "center" }}>Loading…</div>;
   if (!settings) return null;
-
-  const retention = settings.retention_policy as RetentionRow[];
-  const retJob = settings.retention_job as Record<string, unknown>;
-  const dpa = settings.data_ownership as Record<string, unknown>;
-  const enc = settings.encryption as Record<string, unknown>;
-  const hosting = settings.hosting as Record<string, unknown>;
 
   const TABS = [
     { id: "retention", label: "Data Retention" },
@@ -62,7 +60,6 @@ export default function SettingsPage() {
       </div>
 
       <div style={{ maxWidth: 900, margin: "0 auto", padding: "32px 24px" }}>
-        {/* Tabs */}
         <div style={{ display: "flex", gap: 4, marginBottom: 24, flexWrap: "wrap" }}>
           {TABS.map(t => (
             <button key={t.id} onClick={() => t.id === "db" ? loadDb() : t.id === "logs" ? loadLogs() : setTab(t.id as typeof tab)}
@@ -73,14 +70,11 @@ export default function SettingsPage() {
           ))}
         </div>
 
-        {/* Retention */}
         {tab === "retention" && (
           <div>
             <div className="card" style={{ marginBottom: 20 }}>
               <h2 style={{ fontSize: 17, fontWeight: 700, marginBottom: 4 }}>Data Retention Policy</h2>
-              <p style={{ color: "#64748b", fontSize: 14, marginBottom: 20 }}>
-                Configured retention periods per data category, enforced automatically by nightly scheduled job.
-              </p>
+              <p style={{ color: "#64748b", fontSize: 14, marginBottom: 20 }}>Configured retention periods per data category, enforced automatically by nightly scheduled job.</p>
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
                   <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
@@ -90,7 +84,7 @@ export default function SettingsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {retention.map((r, i) => (
+                  {settings.retention_policy.map((r, i) => (
                     <tr key={i} style={{ borderBottom: "1px solid #f1f5f9" }}>
                       <td style={{ padding: "10px 14px", fontSize: 14, fontWeight: 500 }}>{r.category}</td>
                       <td style={{ padding: "10px 14px", fontSize: 14 }}>{r.retention_period}</td>
@@ -108,7 +102,7 @@ export default function SettingsPage() {
             <div className="card">
               <h2 style={{ fontSize: 15, fontWeight: 600, marginBottom: 12 }}>Retention Enforcement Job</h2>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                {Object.entries(retJob).map(([k, v]) => (
+                {(Object.entries(settings.retention_job) as [string, string | number][]).map(([k, v]) => (
                   <div key={k} style={{ padding: "10px 14px", background: "#f8fafc", borderRadius: 8 }}>
                     <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 2, textTransform: "uppercase", letterSpacing: "0.05em" }}>{k.replace(/_/g, " ")}</div>
                     <div style={{ fontSize: 14, fontWeight: 500 }}>{String(v)}</div>
@@ -122,65 +116,54 @@ export default function SettingsPage() {
           </div>
         )}
 
-        {/* Encryption */}
         {tab === "encryption" && (
           <div className="card">
             <h2 style={{ fontSize: 17, fontWeight: 700, marginBottom: 4 }}>Encryption Configuration</h2>
             <p style={{ color: "#64748b", fontSize: 14, marginBottom: 20 }}>How personal data is protected at rest and in transit.</p>
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              {Object.entries(enc).map(([k, v]) => (
+              {(Object.entries(settings.encryption) as [string, string][]).map(([k, v]) => (
                 <div key={k} style={{ padding: 16, background: "#f8fafc", borderRadius: 8, borderLeft: "3px solid #6366f1" }}>
-                  <div style={{ fontSize: 12, color: "#6366f1", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>
-                    {k.replace(/_/g, " ")}
-                  </div>
-                  <div style={{ fontSize: 14 }}>{String(v)}</div>
+                  <div style={{ fontSize: 12, color: "#6366f1", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>{k.replace(/_/g, " ")}</div>
+                  <div style={{ fontSize: 14 }}>{v}</div>
                 </div>
               ))}
             </div>
           </div>
         )}
 
-        {/* DPA */}
         {tab === "dpa" && (
           <div className="card">
             <h2 style={{ fontSize: 17, fontWeight: 700, marginBottom: 4 }}>Data Ownership — DPA Reference</h2>
-            <p style={{ color: "#64748b", fontSize: 14, marginBottom: 20 }}>
-              The Data Processing Agreement (DPA) governs the relationship between the university and DataVerse.
-            </p>
+            <p style={{ color: "#64748b", fontSize: 14, marginBottom: 20 }}>The Data Processing Agreement (DPA) governs the relationship between the university and DataVerse.</p>
             <div style={{ padding: 20, background: "#f0fdf4", borderRadius: 10, border: "1px solid #bbf7d0", marginBottom: 20 }}>
               <div style={{ fontSize: 13, color: "#15803d", fontWeight: 600, marginBottom: 8 }}>DPA SIGNED & ACTIVE</div>
-              <div style={{ fontSize: 14, lineHeight: 1.7 }}>
-                <strong>{String(dpa.basis)}</strong>
-              </div>
+              <div style={{ fontSize: 14, lineHeight: 1.7 }}><strong>{settings.data_ownership.basis}</strong></div>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               {[
-                ["Controller", dpa.controller],
-                ["Processor", dpa.processor],
-                ["DPA Reference", dpa.dpa_reference],
-                ["Date Signed", dpa.dpa_date],
+                ["Controller", settings.data_ownership.controller],
+                ["Processor", settings.data_ownership.processor],
+                ["DPA Reference", settings.data_ownership.dpa_reference],
+                ["Date Signed", settings.data_ownership.dpa_date],
               ].map(([k, v]) => (
-                <div key={String(k)} style={{ padding: "12px 16px", background: "#f8fafc", borderRadius: 8 }}>
-                  <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 2 }}>{String(k)}</div>
-                  <div style={{ fontSize: 14, fontWeight: 500 }}>{String(v)}</div>
+                <div key={k} style={{ padding: "12px 16px", background: "#f8fafc", borderRadius: 8 }}>
+                  <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 2 }}>{k}</div>
+                  <div style={{ fontSize: 14, fontWeight: 500 }}>{v}</div>
                 </div>
               ))}
             </div>
           </div>
         )}
 
-        {/* Hosting */}
         {tab === "hosting" && (
           <div className="card">
             <h2 style={{ fontSize: 17, fontWeight: 700, marginBottom: 4 }}>Hosting Flexibility</h2>
-            <p style={{ color: "#64748b", fontSize: 14, marginBottom: 20 }}>
-              DataVerse runs on any hosting environment. The same codebase deployed here can move to AWS, on-premise, or any cloud.
-            </p>
+            <p style={{ color: "#64748b", fontSize: 14, marginBottom: 20 }}>DataVerse runs on any hosting environment. The same codebase can move to AWS, on-premise, or any cloud.</p>
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              <InfoBox label="Current Demo Environment" value={String(hosting.demo)} color="#f59e0b" />
-              <InfoBox label="Recommended Production" value={String(hosting.production_recommended)} color="#16a34a" />
-              <InfoBox label="On-Premise Available" value={hosting.on_premise_available ? "Yes — Docker/Kubernetes deployment package available" : "No"} color="#6366f1" />
-              <InfoBox label="Data Residency Options" value={String(hosting.data_residency)} color="#0ea5e9" />
+              <InfoBox label="Current Demo Environment" value={settings.hosting.demo} color="#f59e0b" />
+              <InfoBox label="Recommended Production" value={settings.hosting.production_recommended} color="#16a34a" />
+              <InfoBox label="On-Premise Available" value={settings.hosting.on_premise_available ? "Yes — Docker/Kubernetes deployment package available" : "No"} color="#6366f1" />
+              <InfoBox label="Data Residency Options" value={settings.hosting.data_residency} color="#0ea5e9" />
             </div>
             <div style={{ marginTop: 20, padding: 14, background: "#fef9c3", borderRadius: 8, fontSize: 13, color: "#854d0e" }}>
               <strong>Note:</strong> The university retains the right to migrate to any hosting provider at any time. DataVerse provides a full data export in standard formats upon request.
@@ -188,21 +171,16 @@ export default function SettingsPage() {
           </div>
         )}
 
-        {/* DB Inspector */}
         {tab === "db" && dbData && (
           <div className="card">
             <h2 style={{ fontSize: 17, fontWeight: 700, marginBottom: 4 }}>DB Inspector — Sample Records</h2>
-            <div style={{ padding: 12, background: "#fef3c7", borderRadius: 8, marginBottom: 20, fontSize: 13, color: "#92400e" }}>
-              {String((dbData as Record<string, unknown>).note)}
-            </div>
-            {((dbData as Record<string, unknown>).sample_records as Record<string, unknown>[]).map((row, i) => (
+            <div style={{ padding: 12, background: "#fef3c7", borderRadius: 8, marginBottom: 20, fontSize: 13, color: "#92400e" }}>{dbData.note}</div>
+            {dbData.sample_records.map((row, i) => (
               <div key={i} style={{ marginBottom: 16, padding: 16, background: "#f8fafc", borderRadius: 8, fontFamily: "monospace", fontSize: 12 }}>
                 {Object.entries(row).map(([k, v]) => (
                   <div key={k} style={{ display: "flex", gap: 12, marginBottom: 4 }}>
                     <span style={{ color: "#6366f1", minWidth: 200 }}>{k}</span>
-                    <span style={{ color: k.includes("encrypted") ? "#dc2626" : "#1e293b", wordBreak: "break-all" }}>
-                      {String(v ?? "null")}
-                    </span>
+                    <span style={{ color: k.includes("encrypted") ? "#dc2626" : "#1e293b", wordBreak: "break-all" }}>{String(v ?? "null")}</span>
                   </div>
                 ))}
               </div>
@@ -210,20 +188,17 @@ export default function SettingsPage() {
           </div>
         )}
 
-        {/* Pseudonymised Logs */}
         {tab === "logs" && auditData && (
           <div className="card">
             <h2 style={{ fontSize: 17, fontWeight: 700, marginBottom: 4 }}>Pseudonymised Audit Log Export</h2>
-            <div style={{ padding: 12, background: "#eff6ff", borderRadius: 8, marginBottom: 20, fontSize: 13, color: "#1e40af" }}>
-              {String((auditData as Record<string, unknown>).note)}
-            </div>
+            <div style={{ padding: 12, background: "#eff6ff", borderRadius: 8, marginBottom: 20, fontSize: 13, color: "#1e40af" }}>{auditData.note}</div>
             <div style={{ fontFamily: "monospace", fontSize: 12 }}>
-              {((auditData as Record<string, unknown>).logs as Record<string, unknown>[]).slice(0, 20).map((l, i) => (
+              {auditData.logs.slice(0, 20).map((l, i) => (
                 <div key={i} style={{ display: "grid", gridTemplateColumns: "140px 120px 150px 1fr", gap: 8, padding: "8px 0", borderBottom: "1px solid #f1f5f9" }}>
-                  <span style={{ color: "#94a3b8" }}>{new Date(String(l.timestamp)).toLocaleTimeString()}</span>
-                  <span style={{ color: "#6366f1" }}>#{String(l.request_id)}</span>
-                  <span style={{ color: "#dc2626" }}>{String(l.actor).substring(0, 16)}…</span>
-                  <span style={{ color: "#374151" }}>{String(l.action)} {l.detail ? `— ${String(l.detail).substring(0, 60)}` : ""}</span>
+                  <span style={{ color: "#94a3b8" }}>{new Date(l.timestamp).toLocaleTimeString()}</span>
+                  <span style={{ color: "#6366f1" }}>#{l.request_id}</span>
+                  <span style={{ color: "#dc2626" }}>{l.actor.substring(0, 16)}…</span>
+                  <span style={{ color: "#374151" }}>{l.action} {l.detail ? `— ${l.detail.substring(0, 60)}` : ""}</span>
                 </div>
               ))}
             </div>
@@ -233,8 +208,6 @@ export default function SettingsPage() {
     </div>
   );
 }
-
-type RetentionRow = { category: string; retention_period: string; basis: string; auto_delete: boolean };
 
 function InfoBox({ label, value, color }: { label: string; value: string; color: string }) {
   return (
