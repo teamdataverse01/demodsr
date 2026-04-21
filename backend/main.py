@@ -31,13 +31,6 @@ def health():
     return {"status": "ok", "service": "DataVerse DSR API"}
 
 
-@app.post("/internal/seed-db-2026")
-def run_seed():
-    import seed as s
-    s.seed()
-    return {"message": "Seeded."}
-
-
 @app.post("/internal/seed")
 def run_seed(secret: str):
     if secret != "dataverse-seed-2026":
