@@ -1,31 +1,24 @@
-"use client";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { adminLogin } from "@/lib/api";
+import { useNavigate, Link } from "react-router-dom";
+import { adminLogin } from "../../api";
 
 export default function AdminLogin() {
-  const router = useRouter();
+  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function handleLogin(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
+    e.preventDefault(); setLoading(true); setError("");
     try {
       const res = await adminLogin(email, password);
       localStorage.setItem("admin_token", res.token);
       localStorage.setItem("admin_name", res.name);
       localStorage.setItem("admin_role", res.role);
-      localStorage.setItem("admin_email", res.email);
-      router.push("/admin/dashboard");
-    } catch (err: unknown) {
-      setError((err as Error).message);
-    } finally {
-      setLoading(false);
-    }
+      navigate("/admin/dashboard");
+    } catch (err: unknown) { setError((err as Error).message); }
+    finally { setLoading(false); }
   }
 
   return (
@@ -38,21 +31,10 @@ export default function AdminLogin() {
         </div>
         <div className="card">
           <form onSubmit={handleLogin}>
-            <div style={{ marginBottom: 16 }}>
-              <label>Email Address</label>
-              <input type="email" value={email} onChange={e => { setEmail(e.target.value); setError(""); }}
-                placeholder="dpo@cu-demo.edu.ng" required autoFocus />
-            </div>
-            <div style={{ marginBottom: 20 }}>
-              <label>Password</label>
-              <input type="password" value={password} onChange={e => { setPassword(e.target.value); setError(""); }}
-                placeholder="••••••••••" required />
-            </div>
-            {error && <p className="error" style={{ marginBottom: 12 }}>{error}</p>}
-            <button className="btn btn-primary" type="submit" disabled={loading}
-              style={{ width: "100%", justifyContent: "center" }}>
-              {loading ? "Signing in…" : "Sign In"}
-            </button>
+            <div style={{ marginBottom: 16 }}><label>Email</label><input type="email" value={email} onChange={e => { setEmail(e.target.value); setError(""); }} required autoFocus /></div>
+            <div style={{ marginBottom: 20 }}><label>Password</label><input type="password" value={password} onChange={e => { setPassword(e.target.value); setError(""); }} required /></div>
+            {error && <p style={{ color: "#dc2626", fontSize: 14, marginBottom: 12 }}>{error}</p>}
+            <button className="btn btn-primary" type="submit" disabled={loading} style={{ width: "100%", justifyContent: "center" }}>{loading ? "Signing in…" : "Sign In"}</button>
           </form>
         </div>
         <div style={{ marginTop: 16, padding: "12px 16px", background: "#f1f5f9", borderRadius: 8, fontSize: 13, color: "#64748b" }}>
@@ -60,6 +42,9 @@ export default function AdminLogin() {
           dpo@cu-demo.edu.ng / DPOsecure2024!<br />
           registrar@cu-demo.edu.ng / Registrar2024!<br />
           legal@cu-demo.edu.ng / Legal2024!
+        </div>
+        <div style={{ marginTop: 12, textAlign: "center", fontSize: 13 }}>
+          <Link to="/" style={{ color: "#1d4ed8" }}>← Subject Portal</Link>
         </div>
       </div>
     </main>
