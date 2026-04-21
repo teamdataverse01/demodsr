@@ -78,8 +78,8 @@ export default function RequestDetail() {
             <Row label="Type" value={String(req.request_type).replace("_", " ")} />
             <Row label="Description" value={String(req.description || "—")} />
             <Row label="Submitted" value={new Date(String(req.created_at)).toLocaleString()} />
-            {req.completed_at && <Row label="Completed" value={new Date(String(req.completed_at)).toLocaleString()} />}
-            {req.escalation_reason && (
+            {!!req.completed_at && <Row label="Completed" value={new Date(String(req.completed_at)).toLocaleString()} />}
+            {!!req.escalation_reason && (
               <div style={{ marginTop: 12, padding: 12, background: "#fef3c7", borderRadius: 8, fontSize: 13, borderLeft: "4px solid #f59e0b" }}>
                 <strong>Escalation Reason:</strong><br />{String(req.escalation_reason)}
               </div>
