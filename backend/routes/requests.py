@@ -79,7 +79,8 @@ def submit_request(body: NewRequestBody, db: Session = Depends(get_db)):
     db.commit()
 
     if email_error:
-        raise HTTPException(status_code=500, detail=f"Request #{req.id} created but email failed: {email_error}")
+        # Demo mode: return OTP in response so demo still works if email fails
+        return {"request_id": req.id, "message": f"Email delivery failed — demo code: {otp}", "demo_otp": otp}
 
     return {"request_id": req.id, "message": "OTP sent to your registered email address."}
 

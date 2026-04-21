@@ -15,6 +15,7 @@ export default function NewRequest() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [requestId, setRequestId] = useState<number | null>(null);
+  const [demoOtp, setDemoOtp] = useState<string | null>(null);
   const [result, setResult] = useState<{ status: string; risk_tier: string } | null>(null);
   const [form, setForm] = useState({ name: "", email: "", request_type: "access", description: "", new_address: "", new_phone: "" });
   const [otp, setOtp] = useState("");
@@ -28,7 +29,9 @@ export default function NewRequest() {
         ? { ...(form.new_address && { address: form.new_address }), ...(form.new_phone && { phone: form.new_phone }) }
         : null;
       const res = await submitRequest({ name: form.name, email: form.email, request_type: form.request_type, description: form.description, modification_data: mod });
-      setRequestId(res.request_id); setStep("otp");
+      setRequestId(res.request_id);
+      if (res.demo_otp) setDemoOtp(res.demo_otp);
+      setStep("otp");
     } catch (err: unknown) { setError((err as Error).message); }
     finally { setLoading(false); }
   }
@@ -78,7 +81,12 @@ export default function NewRequest() {
         <div style={{ maxWidth: 400, width: "100%" }}>
           <div className="card">
             <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 4 }}>Verify Your Identity</h1>
-            <p style={{ color: "#64748b", fontSize: 14, marginBottom: 24 }}>A 6-digit code was sent to <strong>{form.email}</strong>.</p>
+            <p style={{ color: "#64748b", fontSize: 14, marginBottom: demoOtp ? 8 : 24 }}>A 6-digit code was sent to <strong>{form.email}</strong>.</p>
+            {demoOtp && (
+              <div style={{ background: "#fef9c3", border: "1px solid #fde68a", borderRadius: 8, padding: "10px 14px", marginBottom: 16, fontSize: 14, color: "#92400e" }}>
+                Email delivery failed. <strong>Demo code: {demoOtp}</strong>
+              </div>
+            )}
             <form onSubmit={handleVerify}>
               <div style={{ marginBottom: 20 }}>
                 <label>Verification Code</label>
