@@ -174,8 +174,8 @@ def _execute_request(req: DSRRequest, subject: Subject | None, db: Session) -> s
             f"Student ID: {subject.reg_number or 'N/A'}<br>"
             f"Department: {subject.department or 'N/A'}<br>"
             f"Role: {subject.role or 'N/A'}<br>"
-            f"Phone: {'[encrypted — available on verified request to DPO]' if subject.phone else 'N/A'}<br>"
-            f"Address: {'[encrypted — available on verified request to DPO]' if subject.address else 'N/A'}<br>"
+            f"Phone: {subject.phone or 'N/A'}<br>"
+            f"Address: {subject.address or 'N/A'}<br>"
             f"Special Category Data: {'Yes' if subject.special_category else 'No'}<br>"
             f"Marketing Opt-Out: {'Yes' if subject.opt_out_marketing else 'No'}"
         )

@@ -44,7 +44,19 @@ export default function RequestDetail() {
   useEffect(() => {
     if (!localStorage.getItem("admin_token")) { navigate("/admin/login"); return; }
     Promise.all([getRequestDetail(Number(id)), getMe()])
-      .then(([d, m]) => { setDetail(d); setMe(m); if (d.ai_draft) setNotes(d.ai_draft); })
+      .then(([d, m]) => {
+        const r = d.request ?? d;
+        const flat = {
+          ...r,
+          name: r.subject_name ?? r.name,
+          email: r.subject_email ?? r.email,
+          risk_reason: r.escalation_reason,
+          resolved_at: r.completed_at,
+          resolution_notes: r.admin_notes,
+          subject: d.subject ?? null,
+        };
+        setDetail(flat); setMe(m); if (flat.ai_draft) setNotes(flat.ai_draft);
+      })
       .catch(err => setError((err as Error).message))
       .finally(() => setLoading(false));
   }, [id, navigate]);
