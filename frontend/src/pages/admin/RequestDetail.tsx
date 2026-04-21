@@ -17,9 +17,12 @@ interface Detail {
   resolved_at: string | null;
   resolution_notes: string | null;
   subject: {
-    student_id: string; department: string; special_category: boolean;
-    academic_status: string; has_legal_hold: boolean;
-    outstanding_balance: boolean; is_research_participant: boolean;
+    name: string; email: string; reg_number: string; department: string; role: string;
+    special_category: boolean; academic_status: string; has_legal_hold: boolean;
+    outstanding_balance?: boolean; is_research_participant?: boolean;
+    cgpa?: string; medical_notes?: string; phone?: string; address?: string;
+    opt_out_marketing?: boolean; tags?: string; is_deleted?: boolean;
+    _visible_fields?: string;
   } | null;
 }
 
@@ -91,14 +94,41 @@ export default function RequestDetail() {
 
       {detail.subject && (
         <div className="card" style={{ marginBottom: 16 }}>
-          <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>Subject Profile</h2>
-          <Row label="Student ID" value={detail.subject.student_id} />
-          <Row label="Department" value={detail.subject.department} />
-          <Row label="Academic Status" value={detail.subject.academic_status?.toUpperCase() ?? "ACTIVE"} />
-          {detail.subject.has_legal_hold && <Row label="⚠ Legal Hold" value="Active — data cannot be modified or deleted" />}
-          {detail.subject.outstanding_balance && <Row label="⚠ Outstanding Balance" value="Unpaid fees on record — financial data deletion blocked" />}
-          {detail.subject.is_research_participant && <Row label="Research Participant" value="Yes — deletion affects research dataset" />}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+            <h2 style={{ fontSize: 16, fontWeight: 600 }}>Subject Profile</h2>
+            {detail.subject._visible_fields && (
+              <span style={{ fontSize: 11, background: "#f1f5f9", color: "#64748b", padding: "3px 8px", borderRadius: 4 }}>
+                Visible to your role: {detail.subject._visible_fields}
+              </span>
+            )}
+          </div>
+          <Row label="Name" value={detail.subject.name ?? ""} />
+          <Row label="Email" value={detail.subject.email ?? ""} />
+          <Row label="Reg Number" value={detail.subject.reg_number ?? "N/A"} />
+          <Row label="Department" value={detail.subject.department ?? ""} />
+          <Row label="Role" value={detail.subject.role ?? ""} />
+          <Row label="Academic Status" value={(detail.subject.academic_status ?? "active").toUpperCase()} />
+          {detail.subject.has_legal_hold && (
+            <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 6, padding: "10px 12px", marginBottom: 12, fontSize: 14, color: "#991b1b" }}>
+              ⚠ <strong>Active Legal Hold</strong> — data cannot be modified or deleted until lifted by DPO
+            </div>
+          )}
+          {detail.subject.outstanding_balance && (
+            <div style={{ background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 6, padding: "10px 12px", marginBottom: 12, fontSize: 14, color: "#92400e" }}>
+              ⚠ <strong>Outstanding Financial Obligation</strong> — financial records deletion blocked
+            </div>
+          )}
+          {detail.subject.is_research_participant && <Row label="Research Participant" value="Yes — deletion may affect published datasets" />}
           <Row label="Special Category Data" value={detail.subject.special_category ? "Yes — heightened protection applies" : "No"} />
+          {"cgpa" in detail.subject && <Row label="CGPA" value={detail.subject.cgpa ?? "N/A"} />}
+          {"medical_notes" in detail.subject && detail.subject.medical_notes && (
+            <div style={{ background: "#fdf4ff", border: "1px solid #e9d5ff", borderRadius: 6, padding: "10px 12px", marginBottom: 12, fontSize: 14, color: "#6b21a8" }}>
+              <strong>Medical Notes (DPO only)</strong><br />{detail.subject.medical_notes}
+            </div>
+          )}
+          {"phone" in detail.subject && <Row label="Phone" value={detail.subject.phone ?? "N/A"} />}
+          {"address" in detail.subject && <Row label="Address" value={detail.subject.address ?? "N/A"} />}
+          {detail.subject.tags && <Row label="Tags" value={detail.subject.tags} />}
         </div>
       )}
 

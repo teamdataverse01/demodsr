@@ -52,6 +52,8 @@ class Subject(Base):
     has_legal_hold = Column(Boolean, default=False)     # active litigation / investigation
     outstanding_balance = Column(Boolean, default=False)  # unpaid fees / financial obligation
     is_research_participant = Column(Boolean, default=False)  # data tied to published research
+    cgpa = Column(String(10))                           # restricted: DPO + Registrar only
+    medical_notes = Column(Text)                        # restricted: DPO only
 
 
 class DSRRequest(Base):

@@ -98,14 +98,25 @@ def seed():
             reg_number=reg, address=address, enrolment_date=enrolled, tags=tags,
         ))
 
+    # CGPA and medical notes for demo subjects (index matches DEMO_SUBJECTS order)
+    demo_extras = [
+        ("3.87", None),           # James Adeleke
+        ("3.54", None),           # Fatima Al-Hassan
+        ("4.50", "Hypertension — on medication. Biometric data collected for research trial CU-MED-2024."),  # Dr. Rotimi
+        ("2.10", None),           # Kolade Fashola
+        ("1.95", None),           # Taiwo Ogundimu (expelled)
+        ("3.22", None),           # Sade Martins (legal hold)
+        ("2.78", None),           # Chukwudi Obi (outstanding balance)
+    ]
+
     # Seed demo subjects
-    for name, email, phone, dept, role, reg, address, enrolled, tags, special_cat, acad_status, legal_hold, balance, research in DEMO_SUBJECTS:
+    for (name, email, phone, dept, role, reg, address, enrolled, tags, special_cat, acad_status, legal_hold, balance, research), (cgpa, med) in zip(DEMO_SUBJECTS, demo_extras):
         db.add(Subject(
             name=name, email=email, phone=phone, department=dept, role=role,
             reg_number=reg, address=address, enrolment_date=enrolled, tags=tags,
             special_category=special_cat, academic_status=acad_status,
             has_legal_hold=legal_hold, outstanding_balance=balance,
-            is_research_participant=research,
+            is_research_participant=research, cgpa=cgpa, medical_notes=med,
         ))
 
     # Seed admin accounts

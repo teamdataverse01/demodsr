@@ -93,6 +93,48 @@ def me(admin: AdminUser = Depends(_get_admin)):
     }
 
 
+def _subject_view(subject, role: str) -> dict:
+    """Return subject fields filtered by the admin's role."""
+    if not subject:
+        return {}
+
+    # Fields visible to ALL admin roles
+    base = {
+        "name": subject.name,
+        "email": subject.email,
+        "department": subject.department,
+        "role": subject.role,
+        "reg_number": subject.reg_number,
+        "academic_status": subject.academic_status,
+        "has_legal_hold": subject.has_legal_hold,
+        "special_category": subject.special_category,  # flag only — no underlying detail
+        "is_deleted": subject.is_deleted,
+        "_visible_fields": "name, email, department, role, academic_status, legal hold status, special category flag",
+    }
+
+    if role in ("superadmin", "admin"):
+        # Registrar + DPO: add contact info, academic performance, financial flags
+        base.update({
+            "phone": subject.phone,
+            "address": subject.address,
+            "cgpa": subject.cgpa,
+            "outstanding_balance": subject.outstanding_balance,
+            "is_research_participant": subject.is_research_participant,
+            "opt_out_marketing": subject.opt_out_marketing,
+            "tags": subject.tags,
+            "_visible_fields": "all fields except medical notes",
+        })
+
+    if role == "superadmin":
+        # DPO only: medical notes and full sensitive data
+        base.update({
+            "medical_notes": subject.medical_notes,
+            "_visible_fields": "all fields (full DPO access)",
+        })
+
+    return base
+
+
 # --- Request queue ---
 
 @router.get("/requests")
@@ -156,23 +198,7 @@ def get_request(
             "admin_notes": req.admin_notes,
             "modification_data": req.modification_data,
         },
-        "subject": {
-            "name": subject.name if subject else None,
-            "email": subject.email if subject else None,
-            "phone": subject.phone if subject else None,
-            "department": subject.department if subject else None,
-            "role": subject.role if subject else None,
-            "reg_number": subject.reg_number if subject else None,
-            "address": subject.address if subject else None,
-            "tags": subject.tags if subject else None,
-            "special_category": subject.special_category if subject else False,
-            "academic_status": subject.academic_status if subject else "active",
-            "has_legal_hold": subject.has_legal_hold if subject else False,
-            "outstanding_balance": subject.outstanding_balance if subject else False,
-            "is_research_participant": subject.is_research_participant if subject else False,
-            "opt_out_marketing": subject.opt_out_marketing if subject else False,
-            "is_deleted": subject.is_deleted if subject else False,
-        } if subject else None,
+        "subject": _subject_view(subject, admin.role) if subject else None,
         "audit_trail": [
             {
                 "id": l.id,
