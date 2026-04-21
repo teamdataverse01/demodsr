@@ -36,6 +36,10 @@ def run_seed(secret: str):
     if secret != "dataverse-seed-2026":
         from fastapi import HTTPException
         raise HTTPException(status_code=403, detail="Forbidden")
+    from models import Base
+    from database import engine
+    Base.metadata.drop_all(bind=engine)
+    Base.metadata.create_all(bind=engine)
     import seed as s
     s.seed()
-    return {"message": "Database seeded successfully."}
+    return {"message": "Database re-created and seeded successfully."}
