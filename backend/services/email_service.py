@@ -1,26 +1,35 @@
-import smtplib
 import os
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+import json
+import urllib.request
+import urllib.error
 
-BREVO_LOGIN = os.environ.get("BREVO_LOGIN", "")
-BREVO_PASSWORD = os.environ.get("BREVO_PASSWORD", "")
-FROM_EMAIL = os.environ.get("BREVO_FROM_EMAIL", "salaudeenmubarakstar@gmail.com")
+BREVO_API_KEY = os.environ.get("BREVO_API_KEY", "")
+FROM_EMAIL = "salaudeenmubarakstar@gmail.com"
 FROM_NAME = "DataVerse DSR"
 
 
 def _send(to_email: str, subject: str, html_body: str):
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = subject
-    msg["From"] = f"{FROM_NAME} <{FROM_EMAIL}>"
-    msg["To"] = to_email
-    msg.attach(MIMEText(html_body, "html"))
+    payload = json.dumps({
+        "sender": {"name": FROM_NAME, "email": FROM_EMAIL},
+        "to": [{"email": to_email}],
+        "subject": subject,
+        "htmlContent": html_body,
+    }).encode()
 
-    with smtplib.SMTP("smtp-relay.brevo.com", 587, timeout=15) as server:
-        server.ehlo()
-        server.starttls()
-        server.login(BREVO_LOGIN, BREVO_PASSWORD)
-        server.sendmail(FROM_EMAIL, to_email, msg.as_string())
+    req = urllib.request.Request(
+        "https://api.brevo.com/v3/smtp/email",
+        data=payload,
+        headers={
+            "api-key": BREVO_API_KEY,
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            return json.loads(resp.read())
+    except urllib.error.HTTPError as e:
+        raise RuntimeError(f"Brevo API error {e.code}: {e.read().decode()}")
 
 
 def send_otp(to_email: str, name: str, otp: str):
@@ -33,8 +42,7 @@ def send_otp(to_email: str, name: str, otp: str):
       <p>Your one-time verification code is:</p>
       <div style="font-size:36px;font-weight:bold;letter-spacing:8px;color:#1d4ed8;text-align:center;
                   background:#eff6ff;padding:16px;border-radius:8px;margin:16px 0">{otp}</div>
-      <p style="color:#6b7280;font-size:13px">This code expires in <strong>10 minutes</strong>.
-      Do not share it with anyone.</p>
+      <p style="color:#6b7280;font-size:13px">This code expires in <strong>10 minutes</strong>. Do not share it with anyone.</p>
       <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0">
       <p style="color:#9ca3af;font-size:12px">DataVerse Solutions · Data Subject Request Platform</p>
     </div>
