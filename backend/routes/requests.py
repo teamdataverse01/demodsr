@@ -69,19 +69,17 @@ def submit_request(body: NewRequestBody, db: Session = Depends(get_db)):
     _log(db, req.id, "system", "request_created",
          f"New {body.request_type} request from {body.email}")
 
+    email_error = None
     try:
         send_otp(body.email, body.name, otp)
-        email_sent = True
     except Exception as e:
-        email_sent = False
-        _log(db, req.id, "system", "email_error", str(e))
+        email_error = str(e)
+        _log(db, req.id, "system", "email_error", email_error)
 
     db.commit()
 
-    if not email_sent:
-        import sys
-        err_msg = str(sys.exc_info()[1]) if sys.exc_info()[1] else "unknown error"
-        raise HTTPException(status_code=500, detail=f"Request #{req.id} created but email failed: {err_msg}")
+    if email_error:
+        raise HTTPException(status_code=500, detail=f"Request #{req.id} created but email failed: {email_error}")
 
     return {"request_id": req.id, "message": "OTP sent to your registered email address."}
 
