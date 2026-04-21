@@ -51,17 +51,23 @@ ALUMNI = [
 
 DEMO_SUBJECTS = [
     # name, email, phone, dept, role, reg, address, enrolled, tags, special_category
-    ("James Adeleke", "student.james@demo.edu.ng", "08011111101", "Computer Science", "student",
+    # Scenarios 1 & 3 — Mubarak's main email
+    ("James Adeleke", "salaudeenmubarakstar@gmail.com", "08011111101", "Computer Science", "student",
      "CSC/2022/301", "14 Demo Street, Lagos", "2022-09-01", "enrolled", False),
-    ("Fatima Al-Hassan", "alumni.fatima@demo.edu.ng", "08011111102", "Business Administration", "alumni",
+    # Scenario 2 & 4 — Mubarak's second email
+    ("Fatima Al-Hassan", "mubaraksalaudeen123456@gmail.com", "08011111102", "Business Administration", "alumni",
      "BUS/2019/302", "22 Alumni Road, Lagos", "2019-07-15", "alumni,graduated", False),
-    ("Emmanuel Chukwu", "staff.chukwu@demo.edu.ng", "08011111103", "Human Resources", "staff",
+    # Scenario 3 — Mubarak's main email (modification)
+    ("Emmanuel Chukwu", "salaudeenmubarakstar@gmail.com", "08011111103", "Human Resources", "staff",
      "HR/STAFF/303", "Old Address: 5 Staff Quarters, Ota", "2016-03-01", "staff,active", False),
-    ("Adaeze Obi", "student.ada@demo.edu.ng", "08011111104", "Mass Communication", "student",
+    # Scenario 4 — Mubarak's second email (stop processing)
+    ("Adaeze Obi", "mubaraksalaudeen123456@gmail.com", "08011111104", "Mass Communication", "student",
      "MAS/2021/304", "9 Campus Close, Ota", "2021-09-01", "enrolled", False),
-    ("Dr. Rotimi Balogun", "lecturer.balogun@demo.edu.ng", "08011111105", "Medicine", "faculty",
+    # Scenario 5 — Boss main email (HIGH escalation — only used live in the room)
+    ("Dr. Rotimi Balogun", "tolaniyan@dataversesolutions.org", "08011111105", "Medicine", "faculty",
      "MED/FAC/305", "Faculty Estate, Ota", "2013-09-01", "faculty,active", True),  # special_category
-    ("Kolade Fashola", "student.bulk@demo.edu.ng", "08011111106", "Engineering", "student",
+    # Scenario 6 — Boss second email (CRITICAL — only used live in the room)
+    ("Kolade Fashola", "info@dataversesolutions.org", "08011111106", "Engineering", "student",
      "ENG/2020/306", "3 Bulk House, Ota", "2020-09-01", "enrolled", False),
 ]
 
