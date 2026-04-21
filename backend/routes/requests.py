@@ -9,7 +9,7 @@ from pydantic import BaseModel
 from database import get_db
 from models import DSRRequest, Subject, AuditLog, RequestType, RequestStatus, RiskTier
 from services.risk_engine import assess_risk, requires_escalation
-from services.email_service import send_otp, send_request_confirmation
+from services.email_service import send_otp, send_completion_email
 from services import ai_draft as ai
 
 router = APIRouter(prefix="/request", tags=["requests"])
@@ -137,9 +137,9 @@ def verify_otp(body: VerifyOTPBody, db: Session = Depends(get_db)):
 
     # Auto-execute low/medium risk requests
     req.status = RequestStatus.IN_PROGRESS
-    _execute_request(req, subject, db)
+    completion_message = _execute_request(req, subject, db)
 
-    send_request_confirmation(req.subject_email, req.subject_name, req.request_type, req.id)
+    send_completion_email(req.subject_email, req.subject_name, req.request_type, req.id, completion_message)
 
     # AI draft (non-blocking — best effort)
     try:
@@ -155,23 +155,37 @@ def verify_otp(body: VerifyOTPBody, db: Session = Depends(get_db)):
     return {"status": "completed", "risk_tier": risk_tier, "request_id": req.id}
 
 
-def _execute_request(req: DSRRequest, subject: Subject | None, db: Session):
+def _execute_request(req: DSRRequest, subject: Subject | None, db: Session) -> str:
     if not subject:
-        return
+        return "Your request has been processed."
+
+    req.status = RequestStatus.COMPLETED
+    req.completed_at = datetime.now(timezone.utc)
 
     if req.request_type == RequestType.ACCESS:
+        data_summary = (
+            f"Name: {subject.name}<br>"
+            f"Email: {subject.email}<br>"
+            f"Student ID: {subject.student_id or 'N/A'}<br>"
+            f"Department: {subject.department or 'N/A'}<br>"
+            f"Role: {subject.role or 'N/A'}<br>"
+            f"Phone: {'[encrypted — available on verified request to DPO]' if subject.phone else 'N/A'}<br>"
+            f"Address: {'[encrypted — available on verified request to DPO]' if subject.address else 'N/A'}<br>"
+            f"Special Category Data: {'Yes' if subject.special_category else 'No'}<br>"
+            f"Marketing Opt-Out: {'Yes' if subject.opt_out_marketing else 'No'}"
+        )
         _log(db, req.id, "system", "data_retrieved",
-             f"Subject data retrieved: name={subject.name}, email={subject.email}, "
-             f"department={subject.department}, role={subject.role}, tags={subject.tags}")
-        req.status = RequestStatus.COMPLETED
-        req.completed_at = datetime.now(timezone.utc)
+             f"Access request fulfilled for {subject.email}")
+        return f"The following data is held about you by Covenant University:<br><br>{data_summary}"
 
     elif req.request_type == RequestType.DELETION:
-        _log(db, req.id, "system", "record_deleted",
-             f"Subject record deleted: {subject.email} (role={subject.role})")
         subject.is_deleted = True
-        req.status = RequestStatus.COMPLETED
-        req.completed_at = datetime.now(timezone.utc)
+        _log(db, req.id, "system", "record_deleted",
+             f"Subject record soft-deleted: {subject.email}")
+        return (
+            "Your personal data has been removed from the Covenant University DataVerse system. "
+            "Anonymised records required for statutory compliance may be retained per our retention policy."
+        )
 
     elif req.request_type == RequestType.MODIFICATION:
         mod_data = {}
@@ -181,14 +195,16 @@ def _execute_request(req: DSRRequest, subject: Subject | None, db: Session):
             except Exception:
                 pass
         changes = []
+        change_lines = []
         for field, value in mod_data.items():
             if hasattr(subject, field):
                 old = getattr(subject, field)
                 setattr(subject, field, value)
-                changes.append(f"{field}: '{old}' → '{value}'")
+                changes.append(f"{field}: '{old}' -> '{value}'")
+                change_lines.append(f"<strong>{field.title()}</strong>: updated successfully")
         _log(db, req.id, "system", "record_modified", "; ".join(changes))
-        req.status = RequestStatus.COMPLETED
-        req.completed_at = datetime.now(timezone.utc)
+        updates = "<br>".join(change_lines) if change_lines else "No changes were applied."
+        return f"Your personal data has been updated:<br><br>{updates}"
 
     elif req.request_type == RequestType.STOP_PROCESSING:
         subject.opt_out_marketing = True
@@ -198,9 +214,13 @@ def _execute_request(req: DSRRequest, subject: Subject | None, db: Session):
         tags.update({"opt_out", "stop_marketing"})
         subject.tags = ",".join(tags)
         _log(db, req.id, "system", "processing_stopped",
-             f"opt_out_marketing=True, stop_processing=True, tags updated to: {subject.tags}")
-        req.status = RequestStatus.COMPLETED
-        req.completed_at = datetime.now(timezone.utc)
+             f"opt_out_marketing=True, stop_processing=True")
+        return (
+            "Your data will no longer be used for marketing or non-essential processing. "
+            "This preference has been recorded and will be honoured immediately."
+        )
+
+    return "Your request has been processed."
 
 
 @router.get("/{request_id}/status")
