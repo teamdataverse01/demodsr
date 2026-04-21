@@ -51,22 +51,16 @@ ALUMNI = [
 
 DEMO_SUBJECTS = [
     # name, email, phone, dept, role, reg, address, enrolled, tags, special_category
-    # Scenarios 1 & 3 — Mubarak's main email
+    # Scenario 1 (Access) + Scenario 3 (Modification) — use same record, Mubarak's main email
     ("James Adeleke", "salaudeenmubarakstar@gmail.com", "08011111101", "Computer Science", "student",
      "CSC/2022/301", "14 Demo Street, Lagos", "2022-09-01", "enrolled", False),
-    # Scenario 2 & 4 — Mubarak's second email
+    # Scenario 2 (Deletion) + Scenario 4 (Stop Processing) — Mubarak's second email
     ("Fatima Al-Hassan", "mubaraksalaudeen123456@gmail.com", "08011111102", "Business Administration", "alumni",
      "BUS/2019/302", "22 Alumni Road, Lagos", "2019-07-15", "alumni,graduated", False),
-    # Scenario 3 — Mubarak's main email (modification)
-    ("Emmanuel Chukwu", "salaudeenmubarakstar@gmail.com", "08011111103", "Human Resources", "staff",
-     "HR/STAFF/303", "Old Address: 5 Staff Quarters, Ota", "2016-03-01", "staff,active", False),
-    # Scenario 4 — Mubarak's second email (stop processing)
-    ("Adaeze Obi", "mubaraksalaudeen123456@gmail.com", "08011111104", "Mass Communication", "student",
-     "MAS/2021/304", "9 Campus Close, Ota", "2021-09-01", "enrolled", False),
-    # Scenario 5 — Boss main email (HIGH escalation — only used live in the room)
+    # Scenario 5 — Boss main email (HIGH escalation, special category data)
     ("Dr. Rotimi Balogun", "tolaniyan@dataversesolutions.org", "08011111105", "Medicine", "faculty",
-     "MED/FAC/305", "Faculty Estate, Ota", "2013-09-01", "faculty,active", True),  # special_category
-    # Scenario 6 — Boss second email (CRITICAL — only used live in the room)
+     "MED/FAC/305", "Faculty Estate, Ota", "2013-09-01", "faculty,active", True),
+    # Scenario 6 — Boss second email (CRITICAL escalation, pre-seeded with 3 prior requests)
     ("Kolade Fashola", "info@dataversesolutions.org", "08011111106", "Engineering", "student",
      "ENG/2020/306", "3 Bulk House, Ota", "2020-09-01", "enrolled", False),
 ]
@@ -110,11 +104,11 @@ def seed():
 
     db.commit()
 
-    # Pre-seed 3 prior requests for student.bulk so CRITICAL scenario triggers immediately
-    bulk_subject = db.query(Subject).filter(Subject.email == "student.bulk@demo.edu.ng").first()
+    # Pre-seed 3 prior requests for Kolade so CRITICAL scenario triggers immediately
+    bulk_subject = db.query(Subject).filter(Subject.email == "info@dataversesolutions.org").first()
     for i in range(3):
         r = DSRRequest(
-            subject_email="student.bulk@demo.edu.ng",
+            subject_email="info@dataversesolutions.org",
             subject_name="Kolade Fashola",
             request_type=RequestType.ACCESS,
             status=RequestStatus.COMPLETED,
