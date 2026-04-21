@@ -3,7 +3,7 @@ import json
 import urllib.request
 import urllib.error
 
-BREVO_API_KEY = os.environ.get("BREVO_API_KEY", "")
+BREVO_API_KEY = os.environ.get("BREVO_API_KEY", "").strip()
 FROM_EMAIL = "salaudeenmubarakstar@gmail.com"
 FROM_NAME = "DataVerse DSR"
 
