@@ -171,7 +171,7 @@ def _execute_request(req: DSRRequest, subject: Subject | None, db: Session) -> s
         data_summary = (
             f"Name: {subject.name}<br>"
             f"Email: {subject.email}<br>"
-            f"Student ID: {subject.student_id or 'N/A'}<br>"
+            f"Student ID: {subject.reg_number or 'N/A'}<br>"
             f"Department: {subject.department or 'N/A'}<br>"
             f"Role: {subject.role or 'N/A'}<br>"
             f"Phone: {'[encrypted — available on verified request to DPO]' if subject.phone else 'N/A'}<br>"
