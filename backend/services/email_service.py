@@ -3,23 +3,24 @@ import os
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
-GMAIL_USER = os.environ.get("GMAIL_USER", "")
-GMAIL_APP_PASSWORD = os.environ.get("GMAIL_APP_PASSWORD", "")
+BREVO_LOGIN = os.environ.get("BREVO_LOGIN", "")
+BREVO_PASSWORD = os.environ.get("BREVO_PASSWORD", "")
+FROM_EMAIL = os.environ.get("BREVO_FROM_EMAIL", "salaudeenmubarakstar@gmail.com")
 FROM_NAME = "DataVerse DSR"
 
 
 def _send(to_email: str, subject: str, html_body: str):
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
-    msg["From"] = f"{FROM_NAME} <{GMAIL_USER}>"
+    msg["From"] = f"{FROM_NAME} <{FROM_EMAIL}>"
     msg["To"] = to_email
     msg.attach(MIMEText(html_body, "html"))
 
-    with smtplib.SMTP("smtp.gmail.com", 587, timeout=15) as server:
+    with smtplib.SMTP("smtp-relay.brevo.com", 587, timeout=15) as server:
         server.ehlo()
         server.starttls()
-        server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
-        server.sendmail(GMAIL_USER, to_email, msg.as_string())
+        server.login(BREVO_LOGIN, BREVO_PASSWORD)
+        server.sendmail(FROM_EMAIL, to_email, msg.as_string())
 
 
 def send_otp(to_email: str, name: str, otp: str):
