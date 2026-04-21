@@ -119,6 +119,10 @@ def verify_otp(body: VerifyOTPBody, db: Session = Depends(get_db)):
         request_type=req.request_type,
         subject_has_special_category=subject.special_category if subject else False,
         recent_request_count=recent_count,
+        academic_status=subject.academic_status if subject else "active",
+        has_legal_hold=subject.has_legal_hold if subject else False,
+        outstanding_balance=subject.outstanding_balance if subject else False,
+        is_research_participant=subject.is_research_participant if subject else False,
     )
 
     req.risk_tier = risk_tier

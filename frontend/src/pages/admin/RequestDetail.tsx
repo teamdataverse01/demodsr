@@ -16,7 +16,11 @@ interface Detail {
   created_at: string;
   resolved_at: string | null;
   resolution_notes: string | null;
-  subject: { student_id: string; department: string; special_category: boolean } | null;
+  subject: {
+    student_id: string; department: string; special_category: boolean;
+    academic_status: string; has_legal_hold: boolean;
+    outstanding_balance: boolean; is_research_participant: boolean;
+  } | null;
 }
 
 interface Me {
@@ -90,6 +94,10 @@ export default function RequestDetail() {
           <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>Subject Profile</h2>
           <Row label="Student ID" value={detail.subject.student_id} />
           <Row label="Department" value={detail.subject.department} />
+          <Row label="Academic Status" value={detail.subject.academic_status?.toUpperCase() ?? "ACTIVE"} />
+          {detail.subject.has_legal_hold && <Row label="⚠ Legal Hold" value="Active — data cannot be modified or deleted" />}
+          {detail.subject.outstanding_balance && <Row label="⚠ Outstanding Balance" value="Unpaid fees on record — financial data deletion blocked" />}
+          {detail.subject.is_research_participant && <Row label="Research Participant" value="Yes — deletion affects research dataset" />}
           <Row label="Special Category Data" value={detail.subject.special_category ? "Yes — heightened protection applies" : "No"} />
         </div>
       )}

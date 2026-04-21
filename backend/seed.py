@@ -50,19 +50,28 @@ ALUMNI = [
 ]
 
 DEMO_SUBJECTS = [
-    # name, email, phone, dept, role, reg, address, enrolled, tags, special_category
-    # Scenario 1 (Access) + Scenario 3 (Modification) — use same record, Mubarak's main email
+    # name, email, phone, dept, role, reg, address, enrolled, tags, special_category, academic_status, has_legal_hold, outstanding_balance, is_research_participant
+    # Scenario 1 (Access) + Scenario 3 (Modification) — Mubarak's main email
     ("James Adeleke", "salaudeenmubarakstar@gmail.com", "08011111101", "Computer Science", "student",
-     "CSC/2022/301", "14 Demo Street, Lagos", "2022-09-01", "enrolled", False),
+     "CSC/2022/301", "14 Demo Street, Lagos", "2022-09-01", "enrolled", False, "active", False, False, False),
     # Scenario 2 (Deletion) + Scenario 4 (Stop Processing) — Mubarak's second email
     ("Fatima Al-Hassan", "mubaraksalaudeen123456@gmail.com", "08011111102", "Business Administration", "alumni",
-     "BUS/2019/302", "22 Alumni Road, Lagos", "2019-07-15", "alumni,graduated", False),
-    # Scenario 5 — Boss main email (HIGH escalation, special category data)
+     "BUS/2019/302", "22 Alumni Road, Lagos", "2019-07-15", "alumni,graduated", False, "graduated", False, False, False),
+    # Scenario 5 — Boss main email (HIGH: special category data)
     ("Dr. Rotimi Balogun", "tolaniyan@dataversesolutions.org", "08011111105", "Medicine", "faculty",
-     "MED/FAC/305", "Faculty Estate, Ota", "2013-09-01", "faculty,active", True),
-    # Scenario 6 — Boss second email (CRITICAL escalation, pre-seeded with 3 prior requests)
+     "MED/FAC/305", "Faculty Estate, Ota", "2013-09-01", "faculty,active", True, "active", False, False, True),
+    # Scenario 6 — Boss second email (CRITICAL: pre-seeded 3 prior requests)
     ("Kolade Fashola", "info@dataversesolutions.org", "08011111106", "Engineering", "student",
-     "ENG/2020/306", "3 Bulk House, Ota", "2020-09-01", "enrolled", False),
+     "ENG/2020/306", "3 Bulk House, Ota", "2020-09-01", "enrolled", False, "active", False, False, False),
+    # Scenario 7 — Expelled student deletion (HIGH: disciplinary records must be retained)
+    ("Taiwo Ogundimu", "taiwo.ogundimu@cu-student.edu.ng", "08011111107", "Computer Science", "student",
+     "CSC/2021/307", "9 Off-Campus Road, Ota", "2021-09-01", "expelled,disciplinary_hold", False, "expelled", False, False, False),
+    # Scenario 8 — Legal hold (CRITICAL: active litigation)
+    ("Sade Martins", "sade.martins@cu-student.edu.ng", "08011111108", "Law", "student",
+     "LAW/2022/308", "5 Law Close, Lagos", "2022-09-01", "enrolled,legal_hold", False, "active", True, False, False),
+    # Scenario 9 — Outstanding fees + deletion (HIGH: financial records required)
+    ("Chukwudi Obi", "chukwudi.obi@cu-student.edu.ng", "08011111109", "Accounting", "student",
+     "ACC/2023/309", "11 Finance Road, Lagos", "2023-09-01", "enrolled,debt_flag", False, "active", False, True, False),
 ]
 
 ADMIN_ACCOUNTS = [
@@ -90,11 +99,13 @@ def seed():
         ))
 
     # Seed demo subjects
-    for name, email, phone, dept, role, reg, address, enrolled, tags, special_cat in DEMO_SUBJECTS:
+    for name, email, phone, dept, role, reg, address, enrolled, tags, special_cat, acad_status, legal_hold, balance, research in DEMO_SUBJECTS:
         db.add(Subject(
             name=name, email=email, phone=phone, department=dept, role=role,
             reg_number=reg, address=address, enrolment_date=enrolled, tags=tags,
-            special_category=special_cat,
+            special_category=special_cat, academic_status=acad_status,
+            has_legal_hold=legal_hold, outstanding_balance=balance,
+            is_research_participant=research,
         ))
 
     # Seed admin accounts
@@ -118,6 +129,45 @@ def seed():
             completed_at=datetime.now(timezone.utc) - timedelta(days=i),
         )
         db.add(r)
+
+    # Pre-seed escalated request: expelled student trying to delete disciplinary records
+    db.add(DSRRequest(
+        subject_email="taiwo.ogundimu@cu-student.edu.ng",
+        subject_name="Taiwo Ogundimu",
+        request_type=RequestType.DELETION,
+        description="I want all my records deleted from the university system.",
+        status=RequestStatus.ESCALATED,
+        risk_tier=RiskTier.HIGH,
+        escalation_reason="Subject status is 'expelled'. Disciplinary records must be retained for appeals, legal proceedings, and institutional documentation. Deletion requires DPO approval.",
+        otp_verified=True,
+        created_at=datetime.now(timezone.utc) - timedelta(hours=3),
+    ))
+
+    # Pre-seed escalated request: subject under active legal hold
+    db.add(DSRRequest(
+        subject_email="sade.martins@cu-student.edu.ng",
+        subject_name="Sade Martins",
+        request_type=RequestType.ACCESS,
+        description="Please send me all data the university holds on me.",
+        status=RequestStatus.ESCALATED,
+        risk_tier=RiskTier.CRITICAL,
+        escalation_reason="Active legal hold on this record. Data cannot be modified or deleted until the hold is lifted by the DPO or Legal team.",
+        otp_verified=True,
+        created_at=datetime.now(timezone.utc) - timedelta(hours=5),
+    ))
+
+    # Pre-seed escalated request: student with outstanding fees requesting deletion
+    db.add(DSRRequest(
+        subject_email="chukwudi.obi@cu-student.edu.ng",
+        subject_name="Chukwudi Obi",
+        request_type=RequestType.DELETION,
+        description="Please delete all my personal data.",
+        status=RequestStatus.ESCALATED,
+        risk_tier=RiskTier.HIGH,
+        escalation_reason="Subject has an outstanding financial obligation. Financial records cannot be deleted while a balance exists. Requires Finance and DPO sign-off.",
+        otp_verified=True,
+        created_at=datetime.now(timezone.utc) - timedelta(hours=1),
+    ))
 
     db.commit()
     db.close()

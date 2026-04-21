@@ -48,6 +48,10 @@ class Subject(Base):
     stop_processing = Column(Boolean, default=False)
     is_deleted = Column(Boolean, default=False)
     special_category = Column(Boolean, default=False)  # health/biometric data flag
+    academic_status = Column(String(50), default="active")  # active | graduated | expelled | suspended | deceased
+    has_legal_hold = Column(Boolean, default=False)     # active litigation / investigation
+    outstanding_balance = Column(Boolean, default=False)  # unpaid fees / financial obligation
+    is_research_participant = Column(Boolean, default=False)  # data tied to published research
 
 
 class DSRRequest(Base):
