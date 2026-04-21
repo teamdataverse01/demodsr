@@ -55,8 +55,7 @@ def send_request_confirmation(to_email: str, name: str, request_type: str, reque
         <tr><td style="padding:8px;color:#6b7280;font-size:13px">Status</td>
             <td style="padding:8px;color:#16a34a">In Progress</td></tr>
       </table>
-      <p style="color:#6b7280;font-size:13px">You will receive a confirmation once your request is completed.
-      Under NDPR/GDPR, we are required to respond within 30 days.</p>
+      <p style="color:#6b7280;font-size:13px">You will receive a confirmation once your request is completed.</p>
       <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0">
       <p style="color:#9ca3af;font-size:12px">DataVerse Solutions · Data Subject Request Platform</p>
     </div>
@@ -68,12 +67,10 @@ def send_completion_email(to_email: str, name: str, request_type: str, request_i
     type_label = request_type.replace("_", " ").title()
     html = f"""
     <div style="font-family:sans-serif;max-width:480px;margin:auto;padding:32px;border:1px solid #e5e7eb;border-radius:8px">
-      <h2 style="color:#16a34a">Request Completed ✓</h2>
+      <h2 style="color:#16a34a">Request Completed</h2>
       <p>Hi <strong>{name}</strong>,</p>
       <p>Your <strong>{type_label}</strong> request <strong>#{request_id}</strong> has been completed.</p>
       {f'<p style="background:#f0fdf4;padding:16px;border-radius:8px;border-left:4px solid #16a34a">{message}</p>' if message else ''}
-      <p style="color:#6b7280;font-size:13px">If you have further questions, please submit a new request
-      through the DataVerse portal.</p>
       <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0">
       <p style="color:#9ca3af;font-size:12px">DataVerse Solutions · Data Subject Request Platform</p>
     </div>

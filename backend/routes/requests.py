@@ -69,8 +69,17 @@ def submit_request(body: NewRequestBody, db: Session = Depends(get_db)):
     _log(db, req.id, "system", "request_created",
          f"New {body.request_type} request from {body.email}")
 
-    send_otp(body.email, body.name, otp)
+    try:
+        send_otp(body.email, body.name, otp)
+        email_sent = True
+    except Exception as e:
+        email_sent = False
+        _log(db, req.id, "system", "email_error", str(e))
+
     db.commit()
+
+    if not email_sent:
+        raise HTTPException(status_code=500, detail=f"Request created (ID #{req.id}) but OTP email failed to send. Check server email configuration.")
 
     return {"request_id": req.id, "message": "OTP sent to your registered email address."}
 
