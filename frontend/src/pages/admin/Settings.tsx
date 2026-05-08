@@ -2,35 +2,47 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { getSettings, getDbInspector, getAuditExport } from "../../api";
 
-interface Settings {
-  retention_policies: { data_category: string; retention_period: string; legal_basis: string }[];
-  retention_job: { schedule: string; last_run: string; next_run: string; records_deleted: number };
-  dpa_reference: string;
-  encryption: { algorithm: string; key_management: string; at_rest: boolean; in_transit: boolean };
-  hosting: { provider: string; region: string; data_residency: string; backup: string };
+interface SettingsResponse {
+  retention_policy: { category: string; retention_period: string; basis: string; auto_delete: boolean }[];
+  retention_job: { type: string; schedule: string; last_run: string; next_run: string; records_flagged_last_run: number };
+  data_ownership: { controller: string; processor: string; dpa_signed: boolean; dpa_date: string; dpa_reference: string; basis: string };
+  encryption: { at_rest: string; in_transit: string; sensitive_fields: string; key_management: string };
+  hosting: { demo: string; production_recommended: string; on_premise_available: boolean; data_residency: string };
 }
 
 export default function Settings() {
   const navigate = useNavigate();
-  const [settings, setSettings] = useState<Settings | null>(null);
+  const [settings, setSettings] = useState<SettingsResponse | null>(null);
   const [dbRows, setDbRows] = useState<Record<string, unknown>[] | null>(null);
   const [audit, setAudit] = useState<Record<string, unknown>[] | null>(null);
   const [tab, setTab] = useState<"settings" | "db" | "audit">("settings");
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     if (!localStorage.getItem("admin_token")) { navigate("/admin/login"); return; }
-    getSettings().then(setSettings).catch(() => navigate("/admin/login")).finally(() => setLoading(false));
+    getSettings()
+      .then(setSettings)
+      .catch(err => setError((err as Error).message))
+      .finally(() => setLoading(false));
   }, [navigate]);
 
   async function loadDb() {
-    if (dbRows) { setTab("db"); return; }
-    const r = await getDbInspector(); setDbRows(r); setTab("db");
+    setTab("db");
+    if (dbRows) return;
+    try {
+      const r = await getDbInspector();
+      setDbRows(r.sample_records ?? []);
+    } catch (err) { setError((err as Error).message); }
   }
 
   async function loadAudit() {
-    if (audit) { setTab("audit"); return; }
-    const r = await getAuditExport(); setAudit(r); setTab("audit");
+    setTab("audit");
+    if (audit) return;
+    try {
+      const r = await getAuditExport();
+      setAudit(r.logs ?? []);
+    } catch (err) { setError((err as Error).message); }
   }
 
   if (loading) return <main style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh" }}><p>Loading…</p></main>;
@@ -41,6 +53,8 @@ export default function Settings() {
         <Link to="/admin/dashboard" style={{ color: "#1d4ed8", fontSize: 14 }}>← Back to Dashboard</Link>
       </div>
       <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 24 }}>Compliance Settings</h1>
+
+      {error && <p style={{ color: "#dc2626", marginBottom: 16 }}>{error}</p>}
 
       <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
         {(["settings", "db", "audit"] as const).map(t => (
@@ -59,17 +73,18 @@ export default function Settings() {
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
               <thead>
                 <tr style={{ borderBottom: "1px solid #e2e8f0" }}>
-                  {["Category", "Retention Period", "Legal Basis"].map(h => (
+                  {["Category", "Retention Period", "Legal Basis", "Auto-Delete"].map(h => (
                     <th key={h} style={{ textAlign: "left", padding: "8px 12px", color: "#64748b", fontWeight: 500 }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {settings.retention_policies.map((p, i) => (
+                {settings.retention_policy.map((p, i) => (
                   <tr key={i} style={{ borderBottom: "1px solid #f1f5f9" }}>
-                    <td style={{ padding: "10px 12px", fontWeight: 500 }}>{p.data_category}</td>
+                    <td style={{ padding: "10px 12px", fontWeight: 500 }}>{p.category}</td>
                     <td style={{ padding: "10px 12px", color: "#475569" }}>{p.retention_period}</td>
-                    <td style={{ padding: "10px 12px", color: "#475569" }}>{p.legal_basis}</td>
+                    <td style={{ padding: "10px 12px", color: "#475569" }}>{p.basis}</td>
+                    <td style={{ padding: "10px 12px", color: "#475569" }}>{p.auto_delete ? "Yes" : "No"}</td>
                   </tr>
                 ))}
               </tbody>
@@ -79,29 +94,44 @@ export default function Settings() {
           <div className="card">
             <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>Automated Retention Job</h2>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, fontSize: 14 }}>
+              <KV k="Type" v={settings.retention_job.type} />
               <KV k="Schedule" v={settings.retention_job.schedule} />
               <KV k="Last Run" v={settings.retention_job.last_run} />
               <KV k="Next Run" v={settings.retention_job.next_run} />
-              <KV k="Records Deleted (last run)" v={String(settings.retention_job.records_deleted)} />
+              <KV k="Records Flagged (last run)" v={String(settings.retention_job.records_flagged_last_run)} />
             </div>
           </div>
 
           <div className="card">
-            <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>Encryption & Hosting</h2>
+            <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>Encryption</h2>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, fontSize: 14 }}>
-              <KV k="Algorithm" v={settings.encryption.algorithm} />
+              <KV k="At Rest" v={settings.encryption.at_rest} />
+              <KV k="In Transit" v={settings.encryption.in_transit} />
+              <KV k="Sensitive Fields" v={settings.encryption.sensitive_fields} />
               <KV k="Key Management" v={settings.encryption.key_management} />
-              <KV k="At Rest" v={settings.encryption.at_rest ? "✔ Enabled" : "Disabled"} />
-              <KV k="In Transit" v={settings.encryption.in_transit ? "✔ TLS 1.3" : "Disabled"} />
-              <KV k="Cloud Provider" v={settings.hosting.provider} />
-              <KV k="Region" v={settings.hosting.region} />
-              <KV k="Data Residency" v={settings.hosting.data_residency} />
-              <KV k="Backup" v={settings.hosting.backup} />
             </div>
           </div>
 
-          <div className="card" style={{ background: "#f8fafc", border: "1px solid #e2e8f0" }}>
-            <p style={{ fontSize: 13, color: "#64748b" }}><strong>DPA Reference:</strong> {settings.dpa_reference}</p>
+          <div className="card">
+            <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>Hosting</h2>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, fontSize: 14 }}>
+              <KV k="Demo Environment" v={settings.hosting.demo} />
+              <KV k="Production Recommended" v={settings.hosting.production_recommended} />
+              <KV k="On-Premise Available" v={settings.hosting.on_premise_available ? "Yes" : "No"} />
+              <KV k="Data Residency" v={settings.hosting.data_residency} />
+            </div>
+          </div>
+
+          <div className="card">
+            <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>Data Ownership</h2>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, fontSize: 14 }}>
+              <KV k="Controller" v={settings.data_ownership.controller} />
+              <KV k="Processor" v={settings.data_ownership.processor} />
+              <KV k="DPA Signed" v={settings.data_ownership.dpa_signed ? "Yes" : "No"} />
+              <KV k="DPA Date" v={settings.data_ownership.dpa_date} />
+              <KV k="DPA Reference" v={settings.data_ownership.dpa_reference} />
+            </div>
+            <p style={{ marginTop: 12, fontSize: 13, color: "#64748b", lineHeight: 1.6 }}>{settings.data_ownership.basis}</p>
           </div>
         </div>
       )}
@@ -109,48 +139,19 @@ export default function Settings() {
       {tab === "db" && (
         <div className="card">
           <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>Database Records (Sample)</h2>
-          <p style={{ fontSize: 13, color: "#64748b", marginBottom: 16 }}>Phone and address fields are stored encrypted at rest.</p>
-          {dbRows ? (
+          <p style={{ fontSize: 13, color: "#64748b", marginBottom: 16 }}>Phone and address fields are stored encrypted at rest as Fernet-encrypted blobs.</p>
+          {dbRows === null ? <p>Loading…</p> : dbRows.length === 0 ? <p>No records.</p> : (
             <div style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                 <thead>
                   <tr style={{ borderBottom: "1px solid #e2e8f0" }}>
-                    {Object.keys(dbRows[0] || {}).map(k => (
+                    {Object.keys(dbRows[0]).map(k => (
                       <th key={k} style={{ textAlign: "left", padding: "8px 10px", color: "#64748b", fontWeight: 500, whiteSpace: "nowrap" }}>{k}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {dbRows.map((row, i) => (
-                    <tr key={i} style={{ borderBottom: "1px solid #f1f5f9" }}>
-                      {Object.values(row).map((v, j) => (
-                        <td key={j} style={{ padding: "8px 10px", color: "#475569", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{String(v ?? "")}</td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : <p>Loading…</p>}
-        </div>
-      )}
-
-      {tab === "audit" && (
-        <div className="card">
-          <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>Audit Log Export</h2>
-          <p style={{ fontSize: 13, color: "#64748b", marginBottom: 16 }}>Actor email addresses are SHA-256 pseudonymized for privacy compliance.</p>
-          {audit ? (
-            <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-                <thead>
-                  <tr style={{ borderBottom: "1px solid #e2e8f0" }}>
-                    {Object.keys(audit[0] || {}).map(k => (
-                      <th key={k} style={{ textAlign: "left", padding: "8px 10px", color: "#64748b", fontWeight: 500, whiteSpace: "nowrap" }}>{k}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {audit.map((row, i) => (
                     <tr key={i} style={{ borderBottom: "1px solid #f1f5f9" }}>
                       {Object.values(row).map((v, j) => (
                         <td key={j} style={{ padding: "8px 10px", color: "#475569", maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{String(v ?? "")}</td>
@@ -160,7 +161,36 @@ export default function Settings() {
                 </tbody>
               </table>
             </div>
-          ) : <p>Loading…</p>}
+          )}
+        </div>
+      )}
+
+      {tab === "audit" && (
+        <div className="card">
+          <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>Audit Log Export</h2>
+          <p style={{ fontSize: 13, color: "#64748b", marginBottom: 16 }}>Actor email addresses are SHA-256 pseudonymized for privacy compliance.</p>
+          {audit === null ? <p>Loading…</p> : audit.length === 0 ? <p>No audit entries.</p> : (
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid #e2e8f0" }}>
+                    {Object.keys(audit[0]).map(k => (
+                      <th key={k} style={{ textAlign: "left", padding: "8px 10px", color: "#64748b", fontWeight: 500, whiteSpace: "nowrap" }}>{k}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {audit.map((row, i) => (
+                    <tr key={i} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                      {Object.values(row).map((v, j) => (
+                        <td key={j} style={{ padding: "8px 10px", color: "#475569", maxWidth: 240, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{String(v ?? "")}</td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
     </main>

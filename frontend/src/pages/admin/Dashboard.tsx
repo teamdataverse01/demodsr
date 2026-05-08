@@ -4,8 +4,8 @@ import { getMe, getRequests } from "../../api";
 
 interface Request {
   id: number;
-  name: string;
-  email: string;
+  subject_name: string;
+  subject_email: string;
   request_type: string;
   status: string;
   risk_tier: string;
@@ -73,8 +73,8 @@ export default function Dashboard() {
             <Link to={`/admin/requests/${r.id}`} key={r.id} style={{ textDecoration: "none" }}>
               <div className="card" style={{ display: "flex", alignItems: "center", gap: 16, padding: "16px 20px", cursor: "pointer" }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 600, fontSize: 15 }}>{r.name}</div>
-                  <div style={{ fontSize: 13, color: "#64748b", marginTop: 2 }}>{r.email} · {r.request_type.replace("_", " ")}</div>
+                  <div style={{ fontWeight: 600, fontSize: 15 }}>{r.subject_name}</div>
+                  <div style={{ fontSize: 13, color: "#64748b", marginTop: 2 }}>{r.subject_email} · {r.request_type.replace("_", " ")}</div>
                 </div>
                 <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
                   <span className={`badge badge-${r.risk_tier?.toLowerCase()}`}>{r.risk_tier}</span>

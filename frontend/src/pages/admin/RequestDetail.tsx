@@ -74,7 +74,7 @@ export default function RequestDetail() {
   if (loading) return <main style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh" }}><p>Loading…</p></main>;
   if (!detail) return <main style={{ padding: 32 }}><p style={{ color: "#dc2626" }}>{error || "Not found"}</p></main>;
 
-  const canAct = me?.permissions.can_approve && (detail.status === "escalated" || detail.status === "in_progress" || detail.status === "verified");
+  const canAct = me?.permissions.can_approve && detail.status === "escalated";
 
   return (
     <main style={{ maxWidth: 720, margin: "0 auto", padding: "32px 24px" }}>
